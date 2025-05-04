@@ -1,0 +1,2134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamSave - YouTube Downloader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/video.js@7.20.1/dist/video-js.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary: #FF0000;
+            --primary-light: #FF5A5A;
+            --dark: #1E1E1E;
+            --light: #F8F9FA;
+            --gray: #6C757D;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        }
+        
+        .card-shadow {
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 6px;
+            border-radius: 3px;
+            background-color: #e9ecef;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+            transition: width 0.3s ease;
+        }
+        
+        .tab-active {
+            border-bottom: 3px solid var(--primary);
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        /* Custom media player styles */
+        .media-library {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .media-item {
+            transition: all 0.2s ease;
+        }
+        
+        .media-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Video player container */
+        .video-player-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Audio player styles */
+        .audio-player {
+            width: 100%;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        /* Storage meter */
+        .storage-meter {
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .storage-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fab fa-youtube text-3xl"></i>
+                    <h1 class="text-2xl font-bold">StreamSave</h1>
+                </div>
+                <nav>
+                    <ul class="flex space-x-6">
+                        <li><a href="#" class="hover:underline" data-tab="download">Download</a></li>
+                        <li><a href="#" class="hover:underline" data-tab="library">My Library</a></li>
+                        <li><a href="#" class="hover:underline" data-tab="player">Player</a></li>
+                        <li><a href="#" class="hover:underline" data-tab="settings">Settings</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Download Section -->
+        <section id="download-section">
+            <!-- Hero Section -->
+            <section class="text-center mb-12">
+                <h2 class="text-4xl font-bold mb-4">Download YouTube Videos & Music</h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">Fast, secure and unlimited downloads in multiple formats and qualities</p>
+            </section>
+
+            <!-- Download Card -->
+            <div class="max-w-4xl mx-auto bg-white rounded-xl card-shadow overflow-hidden mb-10 fade-in">
+                <!-- Tabs -->
+                <div class="flex border-b">
+                    <button id="single-tab" class="flex-1 py-4 px-6 text-center font-medium tab-active">
+                        <i class="fas fa-link mr-2"></i> Single Video
+                    </button>
+                    <button id="playlist-tab" class="flex-1 py-4 px-6 text-center font-medium text-gray-500">
+                        <i class="fas fa-list mr-2"></i> Playlist
+                    </button>
+                    <button id="batch-tab" class="flex-1 py-4 px-6 text-center font-medium text-gray-500">
+                        <i class="fas fa-layer-group mr-2"></i> Batch
+                    </button>
+                </div>
+                
+                <!-- Tab Content -->
+                <div class="p-6">
+                    <!-- Single Video Tab Content -->
+                    <div id="single-content" class="space-y-6">
+                        <div>
+                            <label for="video-url" class="block text-sm font-medium text-gray-700 mb-2">YouTube URL</label>
+                            <div class="relative">
+                                <input type="text" id="video-url" placeholder="Paste YouTube link here..." 
+                                       class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                                <button id="paste-btn" class="absolute right-3 top-3 text-gray-500 hover:text-gray-700 transition">
+                                    <i class="far fa-clipboard"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Format Selection -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Format</label>
+                                <div class="space-y-3">
+                                    <div class="flex items-center">
+                                        <input id="audio-format" name="format" type="radio" checked class="h-4 w-4 text-red-600 focus:ring-red-500">
+                                        <label for="audio-format" class="ml-3 block text-sm font-medium text-gray-700">
+                                            <span class="flex items-center">
+                                                <i class="fas fa-music mr-2 text-red-500"></i> Audio Only (MP3, AAC, OGG)
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input id="video-format" name="format" type="radio" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                                        <label for="video-format" class="ml-3 block text-sm font-medium text-gray-700">
+                                            <span class="flex items-center">
+                                                <i class="fas fa-video mr-2 text-red-500"></i> Video (MP4, WEBM, AVI)
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Quality Selection -->
+                            <div>
+                                <label for="quality" class="block text-sm font-medium text-gray-700 mb-2">Quality</label>
+                                <select id="quality" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                                    <option value="highest">Highest Quality</option>
+                                    <option value="1080p">1080p (Full HD)</option>
+                                    <option value="720p" selected>720p (HD)</option>
+                                    <option value="480p">480p (SD)</option>
+                                    <option value="360p">360p</option>
+                                    <option value="144p">144p</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Advanced Options (Collapsible) -->
+                        <div>
+                            <button id="advanced-toggle" class="flex items-center text-sm font-medium text-gray-600 hover:text-gray-800 mb-2">
+                                <i class="fas fa-cog mr-2"></i> Advanced Options
+                                <i id="advanced-arrow" class="fas fa-chevron-down ml-2 text-xs transition-transform"></i>
+                            </button>
+                            
+                            <div id="advanced-options" class="hidden bg-gray-50 p-4 rounded-lg space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="filename" class="block text-sm font-medium text-gray-700 mb-1">Custom Filename</label>
+                                        <input type="text" id="filename" placeholder="Leave blank for default" class="w-full px-3 py-2 rounded border border-gray-300">
+                                    </div>
+                                    <div>
+                                        <label for="trim-start" class="block text-sm font-medium text-gray-700 mb-1">Trim Video</label>
+                                        <div class="flex space-x-2">
+                                            <input type="text" id="trim-start" placeholder="Start (HH:MM:SS)" class="w-1/2 px-3 py-2 rounded border border-gray-300">
+                                            <input type="text" id="trim-end" placeholder="End (HH:MM:SS)" class="w-1/2 px-3 py-2 rounded border border-gray-300">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="subtitles" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                                    <label for="subtitles" class="ml-2 block text-sm text-gray-700">Include Subtitles</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="metadata" checked class="h-4 w-4 text-red-600 focus:ring-red-500">
+                                    <label for="metadata" class="ml-2 block text-sm text-gray-700">Include Metadata (Title, Thumbnail)</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Download Button -->
+                        <div class="pt-2">
+                            <button id="download-btn" class="w-full gradient-bg text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 transition duration-300 flex items-center justify-center">
+                                <i class="fas fa-download mr-2"></i>
+                                <span>Download Now</span>
+                                <svg id="loading-spinner" class="loading-spinner ml-2 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Playlist Tab Content (Hidden by default) -->
+                    <div id="playlist-content" class="hidden space-y-6">
+                        <div>
+                            <label for="playlist-url" class="block text-sm font-medium text-gray-700 mb-2">Playlist URL</label>
+                            <input type="text" id="playlist-url" placeholder="Paste YouTube playlist link here..." 
+                                   class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="playlist-format" class="block text-sm font-medium text-gray-700 mb-2">Format</label>
+                                <select id="playlist-format" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                                    <option value="mp3">MP3 (Audio Only)</option>
+                                    <option value="mp4">MP4 (Video)</option>
+                                    <option value="both">Both (Video + Audio)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label for="playlist-quality" class="block text-sm font-medium text-gray-700 mb-2">Quality</label>
+                                <select id="playlist-quality" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                                    <option value="highest">Highest Available</option>
+                                    <option value="1080p">1080p (Full HD)</option>
+                                    <option value="720p">720p (HD)</option>
+                                    <option value="480p">480p (SD)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="playlist-range" class="block text-sm font-medium text-gray-700 mb-2">Download Range</label>
+                            <div class="flex space-x-4">
+                                <div class="flex items-center">
+                                    <input id="playlist-all" name="range" type="radio" checked class="h-4 w-4 text-red-600 focus:ring-red-500">
+                                    <label for="playlist-all" class="ml-2 block text-sm text-gray-700">All Videos</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input id="playlist-custom" name="range" type="radio" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                                    <label for="playlist-custom" class="ml-2 block text-sm text-gray-700">Custom Range</label>
+                                    <input type="text" id="playlist-range-input" disabled placeholder="e.g. 1-10" class="ml-2 px-2 py-1 w-20 rounded border border-gray-300">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-2">
+                            <button id="download-playlist-btn" class="w-full gradient-bg text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 transition duration-300 flex items-center justify-center">
+                                <i class="fas fa-download mr-2"></i>
+                                <span>Download Playlist</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Batch Tab Content (Hidden by default) -->
+                    <div id="batch-content" class="hidden space-y-6">
+                        <div>
+                            <label for="batch-urls" class="block text-sm font-medium text-gray-700 mb-2">Multiple URLs (One per line)</label>
+                            <textarea id="batch-urls" rows="4" placeholder="Paste multiple YouTube links here, one per line..." 
+                                      class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"></textarea>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="batch-format" class="block text-sm font-medium text-gray-700 mb-2">Format</label>
+                                <select id="batch-format" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                                    <option value="mp3">MP3 (Audio Only)</option>
+                                    <option value="mp4" selected>MP4 (Video)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label for="batch-quality" class="block text-sm font-medium text-gray-700 mb-2">Quality</label>
+                                <select id="batch-quality" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                                    <option value="highest">Highest Available</option>
+                                    <option value="1080p">1080p (Full HD)</option>
+                                    <option value="720p">720p (HD)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-2">
+                            <button id="download-batch-btn" class="w-full gradient-bg text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 transition duration-300 flex items-center justify-center">
+                                <i class="fas fa-download mr-2"></i>
+                                <span>Download All</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Video Preview Section -->
+            <div id="preview-section" class="max-w-4xl mx-auto bg-white rounded-xl card-shadow p-6 mb-10 hidden fade-in">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold flex items-center">
+                        <i class="fas fa-play-circle text-red-500 mr-2"></i>
+                        Video Preview
+                    </h3>
+                    <button id="close-preview" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div class="md:w-2/3">
+                        <div class="aspect-w-16 aspect-h-9 bg-gray-200 rounded-lg overflow-hidden">
+                            <img id="preview-thumbnail" src="" alt="Video Thumbnail" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                    
+                    <div class="md:w-1/3">
+                        <h4 id="preview-title" class="font-bold text-lg mb-2"></h4>
+                        <div class="flex items-center text-sm text-gray-500 mb-3">
+                            <span id="preview-duration" class="mr-3"></span>
+                            <span id="preview-views"></span>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Download Options</label>
+                                <div class="space-y-2">
+                                    <div class="flex items-center">
+                                        <input type="radio" id="preview-audio" name="preview-format" value="audio" checked class="h-4 w-4 text-red-600 focus:ring-red-500">
+                                        <label for="preview-audio" class="ml-2 block text-sm text-gray-700">Audio Only (MP3)</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="radio" id="preview-video" name="preview-format" value="video" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                                        <label for="preview-video" class="ml-2 block text-sm text-gray-700">Video (MP4)</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label for="preview-quality" class="block text-sm font-medium text-gray-700 mb-1">Quality</label>
+                                <select id="preview-quality" class="w-full px-3 py-2 rounded border border-gray-300 text-sm">
+                                    <option value="highest">Highest Quality</option>
+                                    <option value="1080p">1080p (Full HD)</option>
+                                    <option value="720p">720p (HD)</option>
+                                    <option value="480p">480p (SD)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="pt-2">
+                                <button id="confirm-download-btn" class="w-full gradient-bg text-white font-medium py-2 px-4 rounded-lg hover:opacity-90 transition duration-300">
+                                    Download Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Download Progress Section -->
+            <div id="progress-section" class="max-w-4xl mx-auto bg-white rounded-xl card-shadow p-6 mb-10 hidden fade-in">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold flex items-center">
+                        <i class="fas fa-spinner text-red-500 mr-2 animate-spin"></i>
+                        Download Progress
+                    </h3>
+                    <button id="cancel-download" class="text-sm text-gray-500 hover:text-gray-700 flex items-center">
+                        <i class="fas fa-times mr-1"></i> Cancel
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden mr-3">
+                            <img id="progress-thumbnail" src="" alt="Thumbnail" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <h4 id="progress-title" class="font-medium text-sm"></h4>
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span id="progress-status">Preparing download...</span>
+                                <span id="progress-percent">0%</span>
+                            </div>
+                            <div class="progress-bar mt-1">
+                                <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-3 rounded-lg">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>Download speed:</span>
+                            <span id="download-speed">0 MB/s</span>
+                        </div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>Time remaining:</span>
+                            <span id="time-remaining">Calculating...</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span>File size:</span>
+                            <span id="file-size">Unknown</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Media Library Section (Hidden by default) -->
+        <section id="library-section" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold flex items-center">
+                    <i class="fas fa-folder-open text-red-500 mr-2"></i>
+                    My Media Library
+                </h2>
+                <div class="flex space-x-3">
+                    <div class="relative">
+                        <input type="text" id="library-search" placeholder="Search media..." 
+                               class="pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                    <button id="refresh-library" class="bg-gray-100 hover:bg-gray-200 px-3 rounded-lg transition">
+                        <i class="fas fa-sync-alt text-gray-600"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Storage Info -->
+            <div class="bg-white rounded-xl card-shadow p-6 mb-6">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-medium">Storage Usage</h3>
+                    <span id="storage-percentage">0% used</span>
+                </div>
+                <div class="storage-meter bg-gray-200 mb-2">
+                    <div id="storage-fill" class="storage-fill" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between text-sm text-gray-600">
+                    <span id="storage-used">0 MB used</span>
+                    <span id="storage-total">0 MB total</span>
+                </div>
+            </div>
+
+            <!-- Media Tabs -->
+            <div class="flex border-b mb-6">
+                <button id="all-media-tab" class="px-4 py-2 font-medium tab-active">
+                    <i class="fas fa-th mr-2"></i> All Media
+                </button>
+                <button id="videos-tab" class="px-4 py-2 font-medium text-gray-500">
+                    <i class="fas fa-video mr-2"></i> Videos
+                </button>
+                <button id="audio-tab" class="px-4 py-2 font-medium text-gray-500">
+                    <i class="fas fa-music mr-2"></i> Audio
+                </button>
+                <button id="playlists-tab" class="px-4 py-2 font-medium text-gray-500">
+                    <i class="fas fa-list mr-2"></i> Playlists
+                </button>
+            </div>
+
+            <!-- Media Grid -->
+            <div id="media-library" class="media-library">
+                <!-- Media items will be loaded here dynamically -->
+                <div class="text-center py-12 text-gray-400">
+                    <i class="fas fa-box-open text-3xl mb-2"></i>
+                    <p>No media files found</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Media Player Section (Hidden by default) -->
+        <section id="player-section" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold flex items-center">
+                    <i class="fas fa-play-circle text-red-500 mr-2"></i>
+                    Media Player
+                </h2>
+                <button id="player-queue-btn" class="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg text-sm flex items-center transition">
+                    <i class="fas fa-list mr-2"></i>
+                    <span id="queue-count">0</span> in queue
+                </button>
+            </div>
+
+            <!-- Now Playing -->
+            <div class="bg-white rounded-xl card-shadow p-6 mb-6">
+                <div class="flex items-center mb-4">
+                    <div class="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden mr-4">
+                        <img id="now-playing-thumb" src="" alt="Now Playing" class="w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <h3 id="now-playing-title" class="font-bold">No media selected</h3>
+                        <p id="now-playing-artist" class="text-sm text-gray-600"></p>
+                        <div class="flex space-x-2 mt-1">
+                            <span id="now-playing-duration" class="text-xs text-gray-500"></span>
+                            <span id="now-playing-size" class="text-xs text-gray-500"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Player -->
+                <div id="video-player-container" class="video-player-container mb-6 hidden">
+                    <video id="video-player" class="video-js vjs-big-play-centered" controls preload="auto" width="100%" height="auto">
+                        <p class="vjs-no-js">
+                            To view this video please enable JavaScript, and consider upgrading to a
+                            web browser that <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+                        </p>
+                    </video>
+                </div>
+
+                <!-- Audio Player -->
+                <div id="audio-player-container" class="audio-player hidden">
+                    <audio id="audio-player" controls class="w-full"></audio>
+                    <div class="flex justify-center space-x-4 mt-4">
+                        <button id="prev-track" class="p-2 rounded-full bg-gray-100 hover:bg-gray-200">
+                            <i class="fas fa-step-backward"></i>
+                        </button>
+                        <button id="play-pause" class="p-3 rounded-full bg-red-500 text-white hover:bg-red-600">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button id="next-track" class="p-2 rounded-full bg-gray-100 hover:bg-gray-200">
+                            <i class="fas fa-step-forward"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Player Controls -->
+                <div class="flex justify-between items-center mt-4">
+                    <div class="flex space-x-2">
+                        <button id="repeat-btn" class="p-2 text-gray-500 hover:text-red-500" title="Repeat">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        <button id="shuffle-btn" class="p-2 text-gray-500 hover:text-red-500" title="Shuffle">
+                            <i class="fas fa-random"></i>
+                        </button>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button id="volume-btn" class="p-2 text-gray-500 hover:text-red-500" title="Volume">
+                            <i class="fas fa-volume-up"></i>
+                        </button>
+                        <input id="volume-slider" type="range" min="0" max="1" step="0.1" value="0.7" class="w-20">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Playlist -->
+            <div class="bg-white rounded-xl card-shadow p-6">
+                <h3 class="font-bold mb-4">Playlist</h3>
+                <div id="playlist-items" class="space-y-2 max-h-96 overflow-y-auto">
+                    <!-- Playlist items will be loaded here dynamically -->
+                    <div class="text-center py-8 text-gray-400">
+                        <i class="fas fa-music text-3xl mb-2"></i>
+                        <p>Playlist is empty</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Section (Hidden by default) -->
+        <section id="settings-section" class="hidden max-w-4xl mx-auto">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <i class="fas fa-cog text-red-500 mr-2"></i>
+                Settings
+            </h2>
+
+            <div class="bg-white rounded-xl card-shadow p-6 mb-6">
+                <h3 class="font-bold mb-4 border-b pb-2">Download Settings</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="download-location" class="block text-sm font-medium text-gray-700 mb-1">Download Location</label>
+                        <div class="flex">
+                            <input type="text" id="download-location" value="" 
+                                   class="flex-1 px-3 py-2 rounded-l-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                            <button id="browse-location" class="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-r-lg border border-l-0 border-gray-300">
+                                Browse...
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="auto-delete" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                        <label for="auto-delete" class="ml-2 block text-sm text-gray-700">Automatically delete files older than 30 days</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="auto-update" checked class="h-4 w-4 text-red-600 focus:ring-red-500">
+                        <label for="auto-update" class="ml-2 block text-sm text-gray-700">Check for updates automatically</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl card-shadow p-6 mb-6">
+                <h3 class="font-bold mb-4 border-b pb-2">Player Settings</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="default-volume" class="block text-sm font-medium text-gray-700 mb-1">Default Volume</label>
+                        <input type="range" id="default-volume" min="0" max="1" step="0.1" value="0.7" class="w-full">
+                        <span id="volume-value" class="text-sm text-gray-600">70%</span>
+                    </div>
+                    <div>
+                        <label for="default-quality" class="block text-sm font-medium text-gray-700 mb-1">Default Quality</label>
+                        <select id="default-quality" class="w-full px-3 py-2 rounded border border-gray-300">
+                            <option value="highest">Highest Available</option>
+                            <option value="1080p">1080p (Full HD)</option>
+                            <option value="720p" selected>720p (HD)</option>
+                            <option value="480p">480p (SD)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="autoplay" checked class="h-4 w-4 text-red-600 focus:ring-red-500">
+                        <label for="autoplay" class="ml-2 block text-sm text-gray-700">Autoplay next item in playlist</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl card-shadow p-6">
+                <h3 class="font-bold mb-4 border-b pb-2">Advanced Settings</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="concurrent-downloads" class="block text-sm font-medium text-gray-700 mb-1">Max Concurrent Downloads</label>
+                        <select id="concurrent-downloads" class="w-full px-3 py-2 rounded border border-gray-300">
+                            <option value="1">1</option>
+                            <option value="2" selected>2</option>
+                            <option value="3">3</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="download-retries" class="block text-sm font-medium text-gray-700 mb-1">Max Download Retries</label>
+                        <select id="download-retries" class="w-full px-3 py-2 rounded border border-gray-300">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3" selected>3</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="debug-mode" class="h-4 w-4 text-red-600 focus:ring-red-500">
+                        <label for="debug-mode" class="ml-2 block text-sm text-gray-700">Enable debug mode</label>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-3">
+                        <i class="fab fa-youtube text-3xl text-red-500"></i>
+                        <span class="text-2xl font-bold bg-gradient-to-r from-red-500 to-purple-600 bg-clip-text text-transparent">StreamSave</span>
+                    </div>
+                    <p class="text-gray-400">The most advanced YouTube downloader with premium quality conversions</p>
+                    
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-red-400 transition transform hover:scale-110">
+                            <i class="fab fa-twitter text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-blue-400 transition transform hover:scale-110">
+                            <i class="fab fa-facebook text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-pink-500 transition transform hover:scale-110">
+                            <i class="fab fa-instagram text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-gray-200 transition transform hover:scale-110">
+                            <i class="fab fa-github text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Quick Links -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-white">Quick Links</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-red-400 transition">Home</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-red-400 transition">Downloader</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-red-400 transition">Playlist Converter</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-red-400 transition">MP3 Converter</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-red-400 transition">HD Video Download</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Support -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-white">Support</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-red-400 transition">Help Center</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-red-400 transition">FAQ</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-red-400 transition">Tutorials</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-red-400 transition">API Documentation</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-red-400 transition">Report Issue</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Apeli Solutions -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-white">Apeli Solutions</h3>
+                    <div class="text-gray-400 space-y-2">
+                        <p class="flex items-start">
+                            <i class="fas fa-map-marker-alt mt-1 mr-2 text-red-400"></i>
+                            <span>Juja, Nairobi, Kenya</span>
+                        </p>
+                        <p class="flex items-center">
+                            <i class="fas fa-envelope mr-2 text-red-400"></i>
+                            <a href="mailto:contact@apelisolutions.com" class="hover:text-red-400 transition">info@apelisolutions.com</a>
+                        </p>
+                        <p class="flex items-center">
+                            <i class="fas fa-phone-alt mr-2 text-red-400"></i>
+                            <a href="tel:+254703416091" class="hover:text-red-400 transition">+254 703 416 091</a>
+                        </p>
+                        <p class="flex items-center">
+                            <i class="fas fa-globe mr-2 text-red-400"></i>
+                            <a href="https://www.apelisolutions.com" target="_blank" class="hover:text-red-400 transition">www.apelisolutions.com</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Legal & Copyright -->
+            <div class="border-t border-gray-800 pt-8">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="mb-4 md:mb-0 text-center md:text-left">
+                        <p class="text-gray-400 text-sm">
+                            &copy; 2023 <span class="text-red-400">StreamSave</span> by 
+                            <a href="https://www.apelisolutions.com" target="_blank" class="font-semibold hover:text-white transition">
+                                Apeli Solutions
+                            </a>. All rights reserved.
+                        </p>
+                        <p class="text-gray-500 text-xs mt-1">
+                            Proudly made in collaboration with Apeli Systems <i class="fas fa-heart text-red-400"></i>
+                        </p>
+                    </div>
+                    
+                    <div class="flex flex-wrap justify-center gap-4">
+                        <a href="#" class="text-gray-400 hover:text-white text-sm transition">Terms of Service</a>
+                        <a href="#" class="text-gray-400 hover:text-white text-sm transition">Privacy Policy</a>
+                        <a href="#" class="text-gray-400 hover:text-white text-sm transition">Cookie Policy</a>
+                        <a href="#" class="text-gray-400 hover:text-white text-sm transition">DMCA</a>
+                        <a href="#" class="text-gray-400 hover:text-white text-sm transition">Acceptable Use</a>
+                    </div>
+                </div>
+                
+                <!-- Technology Stack -->
+                <div class="mt-6 text-center">
+                    <p class="text-gray-500 text-xs mb-2">Powered by:</p>
+                    <div class="flex flex-wrap justify-center items-center gap-4">
+                        <span class="text-gray-300 text-sm">Python</span>
+                        <span class="text-gray-300 text-sm">Flask</span>
+                        <span class="text-gray-300 text-sm">Pytube</span>
+                        <span class="text-gray-300 text-sm">Tailwind CSS</span>
+                        <span class="text-gray-300 text-sm">Alpine.js</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg hidden transform transition-all duration-300 translate-y-4 opacity-0">
+        <div class="flex items-center">
+            <i id="toast-icon" class="fas fa-info-circle mr-3"></i>
+            <span id="toast-message"></span>
+        </div>
+    </div>
+
+    <!-- Video.js Script -->
+    <script src="https://cdn.jsdelivr.net/npm/video.js@7.20.1/dist/video.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize video.js player
+            const videoPlayer = videojs('video-player', {
+                controls: true,
+                autoplay: false,
+                preload: 'auto',
+                responsive: true,
+                fluid: true
+            });
+
+            // Initialize audio player
+            const audioPlayer = document.getElementById('audio-player');
+            const playPauseBtn = document.getElementById('play-pause');
+            const prevTrackBtn = document.getElementById('prev-track');
+            const nextTrackBtn = document.getElementById('next-track');
+            const volumeBtn = document.getElementById('volume-btn');
+            const volumeSlider = document.getElementById('volume-slider');
+            const repeatBtn = document.getElementById('repeat-btn');
+            const shuffleBtn = document.getElementById('shuffle-btn');
+
+            // Global state
+            let state = {
+                currentTab: 'download',
+                mediaLibrary: [],
+                currentPlaylist: [],
+                currentTrackIndex: -1,
+                isPlaying: false,
+                isShuffle: false,
+                isRepeat: false,
+                volume: 0.7,
+                downloadQueue: [],
+                activeDownloads: 0,
+                maxConcurrentDownloads: 2,
+                storageInfo: {
+                    total: 0,
+                    used: 0,
+                    free: 0
+                },
+                activeDownloadId: null,
+                downloadProgress: {}
+            };
+
+            // DOM Elements
+            const singleTab = document.getElementById('single-tab');
+            const playlistTab = document.getElementById('playlist-tab');
+            const batchTab = document.getElementById('batch-tab');
+            const singleContent = document.getElementById('single-content');
+            const playlistContent = document.getElementById('playlist-content');
+            const batchContent = document.getElementById('batch-content');
+            
+            const videoUrlInput = document.getElementById('video-url');
+            const pasteBtn = document.getElementById('paste-btn');
+            const downloadBtn = document.getElementById('download-btn');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            
+            const previewSection = document.getElementById('preview-section');
+            const closePreviewBtn = document.getElementById('close-preview');
+            const confirmDownloadBtn = document.getElementById('confirm-download-btn');
+            
+            const progressSection = document.getElementById('progress-section');
+            const cancelDownloadBtn = document.getElementById('cancel-download');
+            
+            const downloadHistory = document.getElementById('download-history');
+            const emptyHistory = document.getElementById('empty-history');
+            const clearHistoryBtn = document.getElementById('clear-history');
+            
+            const advancedToggle = document.getElementById('advanced-toggle');
+            const advancedOptions = document.getElementById('advanced-options');
+            const advancedArrow = document.getElementById('advanced-arrow');
+            
+            const playlistCustomRange = document.getElementById('playlist-custom');
+            const playlistRangeInput = document.getElementById('playlist-range-input');
+            
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+            
+            // New elements for media library and player
+            const downloadSection = document.getElementById('download-section');
+            const librarySection = document.getElementById('library-section');
+            const playerSection = document.getElementById('player-section');
+            const settingsSection = document.getElementById('settings-section');
+            const mediaLibrary = document.getElementById('media-library');
+            const librarySearch = document.getElementById('library-search');
+            const refreshLibrary = document.getElementById('refresh-library');
+            const allMediaTab = document.getElementById('all-media-tab');
+            const videosTab = document.getElementById('videos-tab');
+            const audioTab = document.getElementById('audio-tab');
+            const playlistsTab = document.getElementById('playlists-tab');
+            const nowPlayingThumb = document.getElementById('now-playing-thumb');
+            const nowPlayingTitle = document.getElementById('now-playing-title');
+            const nowPlayingArtist = document.getElementById('now-playing-artist');
+            const nowPlayingDuration = document.getElementById('now-playing-duration');
+            const nowPlayingSize = document.getElementById('now-playing-size');
+            const videoPlayerContainer = document.getElementById('video-player-container');
+            const audioPlayerContainer = document.getElementById('audio-player-container');
+            const playlistItems = document.getElementById('playlist-items');
+            const queueCount = document.getElementById('queue-count');
+            const playerQueueBtn = document.getElementById('player-queue-btn');
+            const storagePercentage = document.getElementById('storage-percentage');
+            const storageFill = document.getElementById('storage-fill');
+            const storageUsed = document.getElementById('storage-used');
+            const storageTotal = document.getElementById('storage-total');
+
+            // Navigation between sections
+            document.querySelectorAll('nav a[data-tab]').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const tabName = tab.getAttribute('data-tab');
+                    switchTab(tabName);
+                });
+            });
+
+            function switchTab(tabName) {
+                // Hide all sections
+                downloadSection.classList.add('hidden');
+                librarySection.classList.add('hidden');
+                playerSection.classList.add('hidden');
+                settingsSection.classList.add('hidden');
+                
+                // Show selected section
+                switch(tabName) {
+                    case 'download':
+                        downloadSection.classList.remove('hidden');
+                        break;
+                    case 'library':
+                        librarySection.classList.remove('hidden');
+                        loadMediaLibrary();
+                        break;
+                    case 'player':
+                        playerSection.classList.remove('hidden');
+                        break;
+                    case 'settings':
+                        settingsSection.classList.remove('hidden');
+                        break;
+                }
+                
+                state.currentTab = tabName;
+            }
+
+            // Tab Switching for download types
+            singleTab.addEventListener('click', () => switchDownloadTab('single'));
+            playlistTab.addEventListener('click', () => switchDownloadTab('playlist'));
+            batchTab.addEventListener('click', () => switchDownloadTab('batch'));
+            
+            function switchDownloadTab(tab) {
+                // Reset active tab styles
+                singleTab.classList.remove('tab-active');
+                singleTab.classList.add('text-gray-500');
+                playlistTab.classList.remove('tab-active');
+                playlistTab.classList.add('text-gray-500');
+                batchTab.classList.remove('tab-active');
+                batchTab.classList.add('text-gray-500');
+                
+                // Hide all content
+                singleContent.classList.add('hidden');
+                playlistContent.classList.add('hidden');
+                batchContent.classList.add('hidden');
+                
+                // Show selected content and update tab style
+                if (tab === 'single') {
+                    singleTab.classList.add('tab-active');
+                    singleTab.classList.remove('text-gray-500');
+                    singleContent.classList.remove('hidden');
+                } else if (tab === 'playlist') {
+                    playlistTab.classList.add('tab-active');
+                    playlistTab.classList.remove('text-gray-500');
+                    playlistContent.classList.remove('hidden');
+                } else if (tab === 'batch') {
+                    batchTab.classList.add('tab-active');
+                    batchTab.classList.remove('text-gray-500');
+                    batchContent.classList.remove('hidden');
+                }
+            }
+            
+            // Tab Switching for media library
+            allMediaTab.addEventListener('click', () => switchMediaTab('all'));
+            videosTab.addEventListener('click', () => switchMediaTab('videos'));
+            audioTab.addEventListener('click', () => switchMediaTab('audio'));
+            playlistsTab.addEventListener('click', () => switchMediaTab('playlists'));
+            
+            function switchMediaTab(tab) {
+                // Reset active tab styles
+                allMediaTab.classList.remove('tab-active');
+                allMediaTab.classList.add('text-gray-500');
+                videosTab.classList.remove('tab-active');
+                videosTab.classList.add('text-gray-500');
+                audioTab.classList.remove('tab-active');
+                audioTab.classList.add('text-gray-500');
+                playlistsTab.classList.remove('tab-active');
+                playlistsTab.classList.add('text-gray-500');
+                
+                // Show selected content and update tab style
+                if (tab === 'all') {
+                    allMediaTab.classList.add('tab-active');
+                    allMediaTab.classList.remove('text-gray-500');
+                    renderMediaLibrary(state.mediaLibrary);
+                } else if (tab === 'videos') {
+                    videosTab.classList.add('tab-active');
+                    videosTab.classList.remove('text-gray-500');
+                    const videos = state.mediaLibrary.filter(item => item.type === 'video');
+                    renderMediaLibrary(videos);
+                } else if (tab === 'audio') {
+                    audioTab.classList.add('tab-active');
+                    audioTab.classList.remove('text-gray-500');
+                    const audio = state.mediaLibrary.filter(item => item.type === 'audio');
+                    renderMediaLibrary(audio);
+                } else if (tab === 'playlists') {
+                    playlistsTab.classList.add('tab-active');
+                    playlistsTab.classList.remove('text-gray-500');
+                    // TODO: Implement playlists
+                    renderMediaLibrary([]);
+                }
+            }
+            
+            // Paste from clipboard
+            pasteBtn.addEventListener('click', async () => {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    videoUrlInput.value = text;
+                    showToast('URL pasted from clipboard', 'success');
+                } catch (err) {
+                    showToast('Failed to access clipboard', 'error');
+                    console.error('Failed to read clipboard: ', err);
+                }
+            });
+            
+            // Toggle advanced options
+            advancedToggle.addEventListener('click', () => {
+                advancedOptions.classList.toggle('hidden');
+                advancedArrow.classList.toggle('rotate-180');
+            });
+            
+            // Enable/disable playlist range input
+            playlistCustomRange.addEventListener('change', () => {
+                playlistRangeInput.disabled = !playlistCustomRange.checked;
+            });
+            
+            // Download button click
+            downloadBtn.addEventListener('click', () => {
+                const url = videoUrlInput.value.trim();
+                
+                if (!url) {
+                    showToast('Please enter a YouTube URL', 'error');
+                    return;
+                }
+                
+                if (!isValidYouTubeUrl(url)) {
+                    showToast('Please enter a valid YouTube URL', 'error');
+                    return;
+                }
+                
+                // Show loading spinner
+                loadingSpinner.classList.remove('hidden');
+                downloadBtn.disabled = true;
+                
+                // Fetch video info from backend
+                fetchVideoInfo(url);
+            });
+            
+            // Fetch video info from backend
+            function fetchVideoInfo(url) {
+                fetch(`/api/video-info?url=${encodeURIComponent(url)}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch video info');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Hide loading spinner
+                        loadingSpinner.classList.add('hidden');
+                        downloadBtn.disabled = false;
+                        
+                        if (data.error) {
+                            showToast(data.error, 'error');
+                            return;
+                        }
+                        
+                        // Show preview with the fetched data
+                        showVideoPreview(url, data);
+                    })
+                    .catch(error => {
+                        loadingSpinner.classList.add('hidden');
+                        downloadBtn.disabled = false;
+                        showToast('Failed to fetch video info', 'error');
+                        console.error('Error:', error);
+                    });
+            }
+            
+            // Close preview
+            closePreviewBtn.addEventListener('click', () => {
+                previewSection.classList.add('hidden');
+            });
+            
+            // Confirm download
+            confirmDownloadBtn.addEventListener('click', () => {
+                const url = videoUrlInput.value.trim();
+                const format = document.querySelector('input[name="preview-format"]:checked').value;
+                const quality = document.getElementById('preview-quality').value;
+                
+                previewSection.classList.add('hidden');
+                startDownload(url, format, quality);
+            });
+
+            
+            // Cancel download
+            cancelDownloadBtn.addEventListener('click', () => {
+                if (state.activeDownloadId && confirm('Are you sure you want to cancel this download?')) {
+                    // Send cancel request to backend
+                    fetch(`/api/cancel-download/${state.activeDownloadId}`, {
+                        method: 'POST'
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Failed to cancel download');
+                        
+                        // Update UI
+                        const download = state.downloadQueue.find(d => d.id === state.activeDownloadId);
+                        if (download) {
+                            download.status = 'cancelled';
+                            download.error = 'Cancelled by user';
+                        }
+                        
+                        progressSection.classList.add('hidden');
+                        showToast('Download cancelled', 'warning');
+                        state.activeDownloadId = null;
+                        state.activeDownloads = Math.max(0, state.activeDownloads - 1);
+                        
+                        // Process next download
+                        processDownloadQueue();
+                        updateQueueDisplay();
+                    })
+                    .catch(error => {
+                        showToast('Failed to cancel download', 'error');
+                        console.error('Error cancelling download:', error);
+                    });
+                }
+            });
+
+            // Track download progress 
+            function trackDownloadProgress(downloadId) {
+                updateDownloadProgress(downloadId, 0, 'starting');
+                
+                // Start polling for progress
+                const progressInterval = setInterval(() => {
+                    fetch(`/api/download-progress/${downloadId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.error) {
+                                clearInterval(progressInterval);
+                                return;
+                            }
+                            
+                            updateDownloadProgress(downloadId, data.progress, data.status);
+                            
+                            if (data.progress >= 100) {
+                                clearInterval(progressInterval);
+                                downloadComplete(downloadId);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Progress check error:', error);
+                            clearInterval(progressInterval);
+                        });
+                }, 1000); // Poll every second
+            }
+
+
+            // Update progress display
+            function updateDownloadProgress(downloadId, progress, status) {
+                const download = state.downloadQueue.find(d => d.id === downloadId);
+                if (!download) return;
+                
+                download.progress = progress;
+                download.status = status;
+                state.downloadProgress[downloadId].progress = progress;
+                state.downloadProgress[downloadId].status = status;
+                
+                // Only update UI if this is the currently active download
+                if (downloadId === state.activeDownloadId) {
+                    // Update progress bar
+                    document.getElementById('progress-fill').style.width = `${progress}%`;
+                    document.getElementById('progress-percent').textContent = `${Math.floor(progress)}%`;
+                    
+                    // Update status text
+                    let statusText = 'Downloading...';
+                    if (progress < 20) statusText = 'Preparing download...';
+                    else if (progress < 50) statusText = 'Downloading video...';
+                    else if (progress < 80) statusText = 'Processing file...';
+                    else if (progress < 100) statusText = 'Finalizing...';
+                    else statusText = 'Download complete!';
+                    
+                    document.getElementById('progress-status').textContent = statusText;
+                    
+                    // Update other info if we have data
+                    const dlData = state.downloadProgress[downloadId].data;
+                    if (dlData) {
+                        document.getElementById('download-speed').textContent = `${(2 + Math.random() * 3).toFixed(1)} MB/s`;
+                        document.getElementById('time-remaining').textContent = progress < 100 ? 
+                            `${Math.floor((100 - progress) / 5)} seconds remaining` : 'Completed';
+                        document.getElementById('file-size').textContent = progress < 50 ? 
+                            'Calculating...' : formatFileSize(dlData.file_size || 0);
+                    }
+                }
+                
+                updateQueueDisplay();
+            }
+
+            // Handle download completion
+            function downloadComplete(downloadId) {
+                const download = state.downloadQueue.find(d => d.id === downloadId);
+                if (!download) return;
+                
+                download.status = 'completed';
+                download.progress = 100;
+                
+                if (downloadId === state.activeDownloadId) {
+                    showToast('Download completed successfully!', 'success');
+                    
+                    // Hide progress after delay if this is the active download
+                    setTimeout(() => {
+                        if (state.activeDownloadId === downloadId) {
+                            progressSection.classList.add('hidden');
+                            state.activeDownloadId = null;
+                        }
+                    }, 3000);
+                }
+                
+                updateQueueDisplay();
+            }
+
+
+            function updateQueueDisplay() {
+                const queueList = document.getElementById('download-queue-list');
+                queueList.innerHTML = '';
+                
+                state.downloadQueue.forEach(download => {
+                    const item = document.createElement('div');
+                    item.className = `queue-item ${download.status}`;
+                    
+                    let statusText = '';
+                    if (download.status === 'queued') statusText = 'Queued';
+                    else if (download.status === 'downloading') statusText = `Downloading (${Math.floor(download.progress)}%)`;
+                    else if (download.status === 'completed') statusText = 'Completed';
+                    else if (download.status === 'failed') statusText = `Failed: ${download.error}`;
+                    
+                    item.innerHTML = `
+                        <div class="queue-item-url">${shortenUrl(download.url)}</div>
+                        <div class="queue-item-status">${statusText}</div>
+                        ${download.status === 'downloading' ? '<div class="queue-item-progress"><div style="width: ' + download.progress + '%"></div></div>' : ''}
+                    `;
+                    
+                    queueList.appendChild(item);
+                });
+                
+                // Update queue count
+                document.getElementById('queue-count').textContent = state.downloadQueue.filter(d => d.status === 'queued').length;
+            }
+
+            
+            // Clear history
+            clearHistoryBtn.addEventListener('click', () => {
+                if (downloadHistory.children.length > 1) { // More than just the empty state
+                    if (confirm('Clear all download history?')) {
+                        // Remove all history items except the empty state
+                        while (downloadHistory.firstChild) {
+                            downloadHistory.removeChild(downloadHistory.firstChild);
+                        }
+                        downloadHistory.appendChild(emptyHistory);
+                        emptyHistory.classList.remove('hidden');
+                        showToast('History cleared', 'success');
+                    }
+                } else {
+                    showToast('No history to clear', 'info');
+                }
+            });
+            
+            // Refresh media library
+            refreshLibrary.addEventListener('click', () => {
+                loadMediaLibrary();
+            });
+            
+            // Search media library
+            librarySearch.addEventListener('input', () => {
+                const searchTerm = librarySearch.value.toLowerCase();
+                if (searchTerm === '') {
+                    switchMediaTab('all');
+                    return;
+                }
+                
+                const filtered = state.mediaLibrary.filter(item => 
+                    item.title.toLowerCase().includes(searchTerm) || 
+                    (item.author && item.author.toLowerCase().includes(searchTerm))
+                );
+                
+                renderMediaLibrary(filtered);
+            });
+            
+            // Player controls
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            prevTrackBtn.addEventListener('click', playPreviousTrack);
+            nextTrackBtn.addEventListener('click', playNextTrack);
+            volumeSlider.addEventListener('input', updateVolume);
+            repeatBtn.addEventListener('click', toggleRepeat);
+            shuffleBtn.addEventListener('click', toggleShuffle);
+            
+            audioPlayer.addEventListener('play', () => {
+                state.isPlaying = true;
+                updatePlayPauseButton();
+            });
+            
+            audioPlayer.addEventListener('pause', () => {
+                state.isPlaying = false;
+                updatePlayPauseButton();
+            });
+            
+            audioPlayer.addEventListener('ended', () => {
+                if (state.isRepeat) {
+                    audioPlayer.currentTime = 0;
+                    audioPlayer.play();
+                } else {
+                    playNextTrack();
+                }
+            });
+            
+            videoPlayer.on('play', () => {
+                state.isPlaying = true;
+                updatePlayPauseButton();
+            });
+            
+            videoPlayer.on('pause', () => {
+                state.isPlaying = false;
+                updatePlayPauseButton();
+            });
+            
+            videoPlayer.on('ended', () => {
+                if (state.isRepeat) {
+                    videoPlayer.currentTime(0);
+                    videoPlayer.play();
+                } else {
+                    playNextTrack();
+                }
+            });
+            
+            // Helper function to validate YouTube URL
+            function isValidYouTubeUrl(url) {
+                return url.includes('youtube.com') || url.includes('youtu.be');
+            }
+            
+            // Show video preview with data
+            function showVideoPreview(url, data) {
+                // Extract video ID from URL
+                let videoId;
+                if (url.includes('youtube.com')) {
+                    videoId = new URLSearchParams(new URL(url).search).get('v');
+                } else if (url.includes('youtu.be')) {
+                    videoId = url.split('/').pop();
+                }
+                
+                if (!videoId) {
+                    showToast('Could not extract video ID', 'error');
+                    return;
+                }
+                
+                // Set preview content
+                document.getElementById('preview-thumbnail').src = data.thumbnail_url;
+                document.getElementById('preview-title').textContent = data.title;
+                document.getElementById('preview-duration').textContent = formatDuration(data.length);
+                document.getElementById('preview-views').textContent = formatViews(data.views);
+                
+                // Also set for progress section (will be used later)
+                document.getElementById('progress-thumbnail').src = data.thumbnail_url;
+                document.getElementById('progress-title').textContent = data.title;
+                
+                // Show preview section
+                previewSection.classList.remove('hidden');
+            }
+            
+            // Format duration (seconds to HH:MM:SS)
+            function formatDuration(seconds) {
+                const h = Math.floor(seconds / 3600);
+                const m = Math.floor((seconds % 3600) / 60);
+                const s = Math.floor(seconds % 60);
+                
+                return [h, m > 9 ? m : h ? '0' + m : m || '0', s > 9 ? s : '0' + s]
+                    .filter(Boolean)
+                    .join(':');
+            }
+            
+            // Format views count
+            function formatViews(views) {
+                if (views >= 1000000) {
+                    return (views / 1000000).toFixed(1) + 'M views';
+                } else if (views >= 1000) {
+                    return (views / 1000).toFixed(1) + 'K views';
+                }
+                return views + ' views';
+            }
+            
+            // Start download process
+            function startDownload(url, format, quality) {
+                // Show progress section
+                progressSection.classList.remove('hidden');
+                
+                // Reset progress bar
+                document.getElementById('progress-fill').style.width = '0%';
+                document.getElementById('progress-percent').textContent = '0%';
+                document.getElementById('progress-status').textContent = 'Preparing download...';
+                
+                // Generate a unique ID for this download
+                const downloadId = 'dl-' + Date.now();
+                state.activeDownloadId = downloadId;
+                state.downloadProgress[downloadId] = {
+                    progress: 0,
+                    status: 'starting',
+                    data: null
+                };
+                
+                // Prepare download data
+                const downloadData = {
+                    url: url,
+                    download_type: format,
+                    quality: quality,
+                    metadata: document.getElementById('metadata').checked
+                };
+                
+                // Get custom filename if provided
+                const filename = document.getElementById('filename').value.trim();
+                if (filename) {
+                    downloadData.filename = filename;
+                }
+                
+                // Get trim options if provided
+                const trimStart = document.getElementById('trim-start').value.trim();
+                const trimEnd = document.getElementById('trim-end').value.trim();
+                if (trimStart || trimEnd) {
+                    downloadData.trim_start = trimStart;
+                    downloadData.trim_end = trimEnd;
+                }
+                
+                // Get subtitles option
+                if (document.getElementById('subtitles').checked) {
+                    downloadData.subtitles = true;
+                }
+                
+                // Add to download queue
+                state.downloadQueue.push({
+                    id: downloadId,
+                    url: url,
+                    data: downloadData,
+                    progress: 0,
+                    status: 'queued'
+                });
+                
+                updateQueueDisplay();
+                processDownloadQueue();
+            }
+
+            
+            // Simulate download progress
+            function simulateDownloadProgress(data) {
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 5;
+                    if (progress > 100) progress = 100;
+                    
+                    // Update progress bar
+                    document.getElementById('progress-fill').style.width = `${progress}%`;
+                    document.getElementById('progress-percent').textContent = `${Math.floor(progress)}%`;
+                    
+                    // Update status text
+                    let status = 'Downloading...';
+                    if (progress < 20) status = 'Preparing download...';
+                    else if (progress < 50) status = 'Downloading video...';
+                    else if (progress < 80) status = 'Processing file...';
+                    else if (progress < 100) status = 'Finalizing...';
+                    else status = 'Download complete!';
+                    
+                    document.getElementById('progress-status').textContent = status;
+                    
+                    // Update other info
+                    document.getElementById('download-speed').textContent = `${(2 + Math.random() * 3).toFixed(1)} MB/s`;
+                    document.getElementById('time-remaining').textContent = progress < 100 ? 
+                        `${Math.floor((100 - progress) / 5)} seconds remaining` : 'Completed';
+                    document.getElementById('file-size').textContent = progress < 50 ? 
+                        'Calculating...' : formatFileSize(data.file_size || 0);
+                    
+                    // When complete
+                    if (progress === 100) {
+                        clearInterval(progressInterval);
+                        showToast('Download completed successfully!', 'success');
+                        
+                        // Add to download history
+                        addToHistory(data);
+                        
+                        // Hide progress after delay
+                        setTimeout(() => {
+                            progressSection.classList.add('hidden');
+                        }, 3000);
+                        
+                        // Refresh media library
+                        loadMediaLibrary();
+                    }
+                }, 300);
+            }
+            
+            // Process download queue
+            function processDownloadQueue() {
+                while (state.activeDownloads < state.maxConcurrentDownloads && state.downloadQueue.length > 0) {
+                    const download = state.downloadQueue.find(d => d.status === 'queued');
+                    if (!download) break;
+                    
+                    download.status = 'downloading';
+                    state.activeDownloads++;
+                    state.activeDownloadId = download.id;
+                    
+                    // Start the actual download
+                    fetch('/api/download', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(download.data)
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        
+                        // Store the download data
+                        state.downloadProgress[download.id].data = data;
+                        
+                        // Start tracking progress (using polling since we don't have SSE/WebSockets)
+                        trackDownloadProgress(download.id);
+                        
+                        // When complete
+                        download.status = 'completed';
+                        state.activeDownloads--;
+                        
+                        // Add to download history
+                        addToHistory(data);
+                        
+                        // Refresh media library
+                        loadMediaLibrary();
+                        
+                        // Process next download
+                        processDownloadQueue();
+                    })
+                    .catch(error => {
+                        console.error('Download error:', error);
+                        download.status = 'failed';
+                        download.error = error.message;
+                        state.activeDownloads--;
+                        
+                        showToast(`Download failed: ${error.message}`, 'error');
+                        
+                        // Process next download
+                        processDownloadQueue();
+                    });
+                    
+                    updateQueueDisplay();
+                }
+            }
+            
+            // Format file size
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            // Add to download history
+            function addToHistory(data) {
+                // Hide empty state if present
+                if (!emptyHistory.classList.contains('hidden')) {
+                    emptyHistory.classList.add('hidden');
+                }
+                
+                // Create history item
+                const historyItem = document.createElement('div');
+                historyItem.className = 'flex items-center justify-between p-3 border-b border-gray-100 hover:bg-gray-50 rounded-lg transition';
+                historyItem.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden mr-3">
+                            <img src="${data.thumbnail_url || 'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg'}" alt="Thumbnail" class="w-full h-full object-cover">
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-sm">${data.title || 'Unknown Title'}</h4>
+                            <p class="text-xs text-gray-500">${data.file_type ? data.file_type.toUpperCase() : 'MP4'} • ${data.quality || '720p'} • ${formatFileSize(data.file_size || 0)}</p>
+                            <span class="text-xs text-gray-400">Just now</span>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="text-gray-400 hover:text-red-500 transition">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        <button class="text-gray-400 hover:text-red-500 transition">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
+                
+                // Add to top of history
+                if (downloadHistory.firstChild) {
+                    downloadHistory.insertBefore(historyItem, downloadHistory.firstChild);
+                } else {
+                    downloadHistory.appendChild(historyItem);
+                }
+            }
+            
+            // Load media library from backend
+            function loadMediaLibrary() {
+                fetch('/api/media-library')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        
+                        state.mediaLibrary = data.files || [];
+                        state.storageInfo = data.storage || { total: 0, used: 0, free: 0 };
+                        
+                        // Update storage display
+                        updateStorageDisplay();
+                        
+                        // Render media library
+                        renderMediaLibrary(state.mediaLibrary);
+                    })
+                    .catch(error => {
+                        showToast('Failed to load media library', 'error');
+                        console.error('Error:', error);
+                    });
+            }
+            
+            // Update storage display
+            function updateStorageDisplay() {
+                const percentage = (state.storageInfo.used / state.storageInfo.total * 100).toFixed(1);
+                storagePercentage.textContent = `${percentage}% used`;
+                storageFill.style.width = `${percentage}%`;
+                storageUsed.textContent = formatFileSize(state.storageInfo.used);
+                storageTotal.textContent = formatFileSize(state.storageInfo.total);
+            }
+            
+            // Render media library
+            function renderMediaLibrary(items) {
+                // Clear current items
+                mediaLibrary.innerHTML = '';
+                
+                if (items.length === 0) {
+                    mediaLibrary.innerHTML = `
+                        <div class="text-center py-12 text-gray-400 col-span-full">
+                            <i class="fas fa-box-open text-3xl mb-2"></i>
+                            <p>No media files found</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Create media items
+                items.forEach(item => {
+                    const mediaItem = document.createElement('div');
+                    mediaItem.className = 'media-item bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition cursor-pointer';
+                    mediaItem.innerHTML = `
+                        <div class="relative">
+                            <img src="${item.thumbnail || 'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg'}" alt="${item.title}" class="w-full h-32 object-cover">
+                            <div class="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-1 rounded">
+                                ${formatDuration(item.duration || 0)}
+                            </div>
+                            ${item.type === 'audio' ? 
+                                `<div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
+                                    <i class="fas fa-music text-white text-3xl"></i>
+                                </div>` : ''}
+                        </div>
+                        <div class="p-3">
+                            <h3 class="font-medium text-sm truncate">${item.title}</h3>
+                            <p class="text-xs text-gray-500 truncate">${item.author || 'Unknown author'}</p>
+                            <div class="flex justify-between items-center mt-2">
+                                <span class="text-xs text-gray-400">${formatFileSize(item.size || 0)}</span>
+                                <div class="flex space-x-1">
+                                    <button class="text-gray-400 hover:text-red-500 transition play-btn" data-id="${item.id}">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                    <button class="text-gray-400 hover:text-red-500 transition download-btn" data-id="${item.id}">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    <button class="text-gray-400 hover:text-red-500 transition delete-btn" data-id="${item.id}">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    mediaLibrary.appendChild(mediaItem);
+                });
+                
+                // Add event listeners to buttons
+                document.querySelectorAll('.play-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const id = btn.getAttribute('data-id');
+                        playMediaItem(id);
+                    });
+                });
+                
+                document.querySelectorAll('.download-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const id = btn.getAttribute('data-id');
+                        downloadMediaItem(id);
+                    });
+                });
+                
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const id = btn.getAttribute('data-id');
+                        deleteMediaItem(id);
+                    });
+                });
+                
+                // Add click event to media items to add to playlist
+                document.querySelectorAll('.media-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        if (!e.target.classList.contains('play-btn') && 
+                            !e.target.classList.contains('download-btn') && 
+                            !e.target.classList.contains('delete-btn')) {
+                            const id = item.querySelector('.play-btn').getAttribute('data-id');
+                            addToPlaylist(id);
+                        }
+                    });
+                });
+            }
+            
+            // Play media item
+            function playMediaItem(id) {
+                const item = state.mediaLibrary.find(i => i.id === id);
+                if (!item) return;
+                
+                // Switch to player tab if not already there
+                if (state.currentTab !== 'player') {
+                    switchTab('player');
+                }
+                
+                // Update now playing info
+                nowPlayingThumb.src = item.thumbnail || 'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg';
+                nowPlayingTitle.textContent = item.title;
+                nowPlayingArtist.textContent = item.author || 'Unknown artist';
+                nowPlayingDuration.textContent = formatDuration(item.duration || 0);
+                nowPlayingSize.textContent = formatFileSize(item.size || 0);
+                
+                // Set current track index
+                state.currentTrackIndex = state.currentPlaylist.findIndex(track => track.id === id);
+                if (state.currentTrackIndex === -1) {
+                    state.currentPlaylist = [item];
+                    state.currentTrackIndex = 0;
+                    renderPlaylist();
+                }
+                
+                // Play the media
+                if (item.type === 'video') {
+                    audioPlayerContainer.classList.add('hidden');
+                    videoPlayerContainer.classList.remove('hidden');
+                    
+                    videoPlayer.src({
+                        src: `/media/${item.id}`,
+                        type: `video/${item.format || 'mp4'}`
+                    });
+                    
+                    videoPlayer.play();
+                } else {
+                    videoPlayerContainer.classList.add('hidden');
+                    audioPlayerContainer.classList.remove('hidden');
+                    
+                    audioPlayer.src = `/media/${item.id}`;
+                    audioPlayer.play();
+                }
+                
+                state.isPlaying = true;
+                updatePlayPauseButton();
+            }
+            
+            // Download media item
+            function downloadMediaItem(id) {
+                const item = state.mediaLibrary.find(i => i.id === id);
+                if (!item) return;
+                
+                // Create a temporary link and trigger download
+                const link = document.createElement('a');
+                link.href = `/download/${item.id}`;
+                link.download = `${item.title}.${item.format || 'mp4'}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showToast('Download started', 'success');
+            }
+            
+            // Delete media item
+            function deleteMediaItem(id) {
+                if (!confirm('Are you sure you want to delete this media file?')) return;
+                
+                fetch(`/api/media/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Media deleted', 'success');
+                        loadMediaLibrary();
+                        
+                        // If the deleted item is in the current playlist, remove it
+                        state.currentPlaylist = state.currentPlaylist.filter(item => item.id !== id);
+                        if (state.currentPlaylist.length === 0) {
+                            state.currentTrackIndex = -1;
+                        } else if (state.currentTrackIndex >= state.currentPlaylist.length) {
+                            state.currentTrackIndex = state.currentPlaylist.length - 1;
+                        }
+                        
+                        renderPlaylist();
+                    } else {
+                        throw new Error(data.error || 'Failed to delete media');
+                    }
+                })
+                .catch(error => {
+                    showToast('Failed to delete media: ' + error.message, 'error');
+                    console.error('Error:', error);
+                });
+            }
+            
+            // Add to playlist
+            function addToPlaylist(id) {
+                const item = state.mediaLibrary.find(i => i.id === id);
+                if (!item) return;
+                
+                // Check if item is already in playlist
+                if (state.currentPlaylist.some(track => track.id === id)) {
+                    showToast('Item already in playlist', 'info');
+                    return;
+                }
+                
+                state.currentPlaylist.push(item);
+                renderPlaylist();
+                showToast('Added to playlist', 'success');
+            }
+            
+            // Render playlist
+            function renderPlaylist() {
+                playlistItems.innerHTML = '';
+                
+                if (state.currentPlaylist.length === 0) {
+                    playlistItems.innerHTML = `
+                        <div class="text-center py-8 text-gray-400">
+                            <i class="fas fa-music text-3xl mb-2"></i>
+                            <p>Playlist is empty</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                state.currentPlaylist.forEach((item, index) => {
+                    const playlistItem = document.createElement('div');
+                    playlistItem.className = `flex items-center p-2 rounded-lg hover:bg-gray-50 ${index === state.currentTrackIndex ? 'bg-red-50' : ''}`;
+                    playlistItem.innerHTML = `
+                        <div class="w-10 h-10 bg-gray-200 rounded-lg overflow-hidden mr-3">
+                            <img src="${item.thumbnail || 'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg'}" alt="${item.title}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-sm font-medium truncate">${item.title}</h4>
+                            <p class="text-xs text-gray-500 truncate">${item.author || 'Unknown artist'}</p>
+                        </div>
+                        <div class="flex space-x-2 ml-2">
+                            <button class="text-gray-400 hover:text-red-500 transition play-now-btn" data-index="${index}">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <button class="text-gray-400 hover:text-red-500 transition remove-from-playlist-btn" data-index="${index}">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    playlistItems.appendChild(playlistItem);
+                });
+                
+                // Add event listeners
+                document.querySelectorAll('.play-now-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const index = parseInt(btn.getAttribute('data-index'));
+                        playTrack(index);
+                    });
+                });
+                
+                document.querySelectorAll('.remove-from-playlist-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const index = parseInt(btn.getAttribute('data-index'));
+                        removeFromPlaylist(index);
+                    });
+                });
+            }
+            
+            // Play track from playlist
+            function playTrack(index) {
+                if (index < 0 || index >= state.currentPlaylist.length) return;
+                
+                state.currentTrackIndex = index;
+                const item = state.currentPlaylist[index];
+                playMediaItem(item.id);
+            }
+            
+            // Remove from playlist
+            function removeFromPlaylist(index) {
+                if (index < 0 || index >= state.currentPlaylist.length) return;
+                
+                state.currentPlaylist.splice(index, 1);
+                
+                // Adjust current track index if needed
+                if (state.currentTrackIndex === index) {
+                    state.currentTrackIndex = -1;
+                    if (state.currentPlaylist.length > 0) {
+                        state.currentTrackIndex = Math.min(index, state.currentPlaylist.length - 1);
+                    }
+                } else if (state.currentTrackIndex > index) {
+                    state.currentTrackIndex--;
+                }
+                
+                renderPlaylist();
+                showToast('Removed from playlist', 'success');
+            }
+            
+            // Toggle play/pause
+            function togglePlayPause() {
+                if (state.currentTrackIndex === -1 && state.currentPlaylist.length > 0) {
+                    playTrack(0);
+                    return;
+                }
+                
+                if (state.isPlaying) {
+                    if (videoPlayerContainer.classList.contains('hidden')) {
+                        audioPlayer.pause();
+                    } else {
+                        videoPlayer.pause();
+                    }
+                } else {
+                    if (videoPlayerContainer.classList.contains('hidden')) {
+                        audioPlayer.play();
+                    } else {
+                        videoPlayer.play();
+                    }
+                }
+            }
+            
+            // Update play/pause button
+            function updatePlayPauseButton() {
+                const icon = playPauseBtn.querySelector('i');
+                if (state.isPlaying) {
+                    icon.className = 'fas fa-pause';
+                } else {
+                    icon.className = 'fas fa-play';
+                }
+            }
+            
+            // Play previous track
+            function playPreviousTrack() {
+                if (state.currentPlaylist.length === 0) return;
+                
+                let newIndex = state.currentTrackIndex - 1;
+                if (newIndex < 0) {
+                    if (state.isRepeat) {
+                        newIndex = state.currentPlaylist.length - 1;
+                    } else {
+                        return;
+                    }
+                }
+                
+                playTrack(newIndex);
+            }
+            
+            // Play next track
+            function playNextTrack() {
+                if (state.currentPlaylist.length === 0) return;
+                
+                let newIndex = state.currentTrackIndex + 1;
+                if (newIndex >= state.currentPlaylist.length) {
+                    if (state.isRepeat) {
+                        newIndex = 0;
+                    } else {
+                        return;
+                    }
+                }
+                
+                playTrack(newIndex);
+            }
+            
+            // Update volume
+            function updateVolume() {
+                state.volume = parseFloat(volumeSlider.value);
+                audioPlayer.volume = state.volume;
+                videoPlayer.volume(state.volume);
+                
+                // Update volume button icon
+                const icon = volumeBtn.querySelector('i');
+                if (state.volume === 0) {
+                    icon.className = 'fas fa-volume-mute';
+                } else if (state.volume < 0.5) {
+                    icon.className = 'fas fa-volume-down';
+                } else {
+                    icon.className = 'fas fa-volume-up';
+                }
+            }
+            
+            // Toggle repeat
+            function toggleRepeat() {
+                state.isRepeat = !state.isRepeat;
+                repeatBtn.classList.toggle('text-red-500');
+                repeatBtn.classList.toggle('text-gray-500');
+            }
+            
+            // Toggle shuffle
+            function toggleShuffle() {
+                state.isShuffle = !state.isShuffle;
+                shuffleBtn.classList.toggle('text-red-500');
+                shuffleBtn.classList.toggle('text-gray-500');
+                
+                if (state.isShuffle) {
+                    // Shuffle the playlist (except the currently playing track)
+                    const currentTrack = state.currentPlaylist[state.currentTrackIndex];
+                    const otherTracks = state.currentPlaylist.filter((_, i) => i !== state.currentTrackIndex);
+                    
+                    // Fisher-Yates shuffle algorithm
+                    for (let i = otherTracks.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [otherTracks[i], otherTracks[j]] = [otherTracks[j], otherTracks[i]];
+                    }
+                    
+                    state.currentPlaylist = [currentTrack, ...otherTracks];
+                    state.currentTrackIndex = 0;
+                    renderPlaylist();
+                }
+            }
+            
+            // Show toast notification
+            function showToast(message, type = 'info') {
+                // Set message and icon
+                toastMessage.textContent = message;
+                
+                // Set icon and color based on type
+                if (type === 'success') {
+                    toastIcon.className = 'fas fa-check-circle mr-3 text-green-400';
+                } else if (type === 'error') {
+                    toastIcon.className = 'fas fa-exclamation-circle mr-3 text-red-400';
+                } else if (type === 'warning') {
+                    toastIcon.className = 'fas fa-exclamation-triangle mr-3 text-yellow-400';
+                } else {
+                    toastIcon.className = 'fas fa-info-circle mr-3 text-blue-400';
+                }
+                
+                // Show toast
+                toast.classList.remove('hidden');
+                setTimeout(() => {
+                    toast.classList.remove('translate-y-4', 'opacity-0');
+                    toast.classList.add('translate-y-0', 'opacity-100');
+                }, 10);
+                
+                // Hide after delay
+                setTimeout(() => {
+                    toast.classList.add('translate-y-4', 'opacity-0');
+                    setTimeout(() => toast.classList.add('hidden'), 300);
+                }, 3000);
+            }
+            
+            // Initialize the app
+            function init() {
+                // Load media library
+                loadMediaLibrary();
+                
+                // Set default volume
+                audioPlayer.volume = state.volume;
+                videoPlayer.volume(state.volume);
+                
+                // Set initial tab
+                switchTab('download');
+            }
+            
+            // Start the app
+            init();
+        });
+    </script>
+</body>
+</html>
