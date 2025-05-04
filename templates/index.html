@@ -1104,7 +1104,6 @@
                         return response.json();
                     })
                     .then(data => {
-                        // Hide loading spinner
                         loadingSpinner.classList.add('hidden');
                         downloadBtn.disabled = false;
                         
@@ -1113,7 +1112,6 @@
                             return;
                         }
                         
-                        // Show preview with the fetched data
                         showVideoPreview(url, data);
                     })
                     .catch(error => {
@@ -1241,8 +1239,6 @@
                 
                 updateQueueDisplay();
             }
-
-            // Handle download completion
             function downloadComplete(downloadId) {
                 const download = state.downloadQueue.find(d => d.id === downloadId);
                 if (!download) return;
@@ -1253,7 +1249,6 @@
                 if (downloadId === state.activeDownloadId) {
                     showToast('Download completed successfully!', 'success');
                     
-                    // Hide progress after delay if this is the active download
                     setTimeout(() => {
                         if (state.activeDownloadId === downloadId) {
                             progressSection.classList.add('hidden');
@@ -1264,7 +1259,6 @@
                 
                 updateQueueDisplay();
             }
-
 
             function updateQueueDisplay() {
                 const queueList = document.getElementById('download-queue-list');
@@ -1289,16 +1283,12 @@
                     queueList.appendChild(item);
                 });
                 
-                // Update queue count
                 document.getElementById('queue-count').textContent = state.downloadQueue.filter(d => d.status === 'queued').length;
             }
 
-            
-            // Clear history
             clearHistoryBtn.addEventListener('click', () => {
-                if (downloadHistory.children.length > 1) { // More than just the empty state
+                if (downloadHistory.children.length > 1) {
                     if (confirm('Clear all download history?')) {
-                        // Remove all history items except the empty state
                         while (downloadHistory.firstChild) {
                             downloadHistory.removeChild(downloadHistory.firstChild);
                         }
@@ -1311,12 +1301,10 @@
                 }
             });
             
-            // Refresh media library
             refreshLibrary.addEventListener('click', () => {
                 loadMediaLibrary();
             });
             
-            // Search media library
             librarySearch.addEventListener('input', () => {
                 const searchTerm = librarySearch.value.toLowerCase();
                 if (searchTerm === '') {
@@ -1332,7 +1320,6 @@
                 renderMediaLibrary(filtered);
             });
             
-            // Player controls
             playPauseBtn.addEventListener('click', togglePlayPause);
             prevTrackBtn.addEventListener('click', playPreviousTrack);
             nextTrackBtn.addEventListener('click', playNextTrack);
@@ -1378,14 +1365,11 @@
                 }
             });
             
-            // Helper function to validate YouTube URL
             function isValidYouTubeUrl(url) {
                 return url.includes('youtube.com') || url.includes('youtu.be');
             }
             
-            // Show video preview with data
             function showVideoPreview(url, data) {
-                // Extract video ID from URL
                 let videoId;
                 if (url.includes('youtube.com')) {
                     videoId = new URLSearchParams(new URL(url).search).get('v');
@@ -1398,21 +1382,17 @@
                     return;
                 }
                 
-                // Set preview content
                 document.getElementById('preview-thumbnail').src = data.thumbnail_url;
                 document.getElementById('preview-title').textContent = data.title;
                 document.getElementById('preview-duration').textContent = formatDuration(data.length);
                 document.getElementById('preview-views').textContent = formatViews(data.views);
                 
-                // Also set for progress section (will be used later)
                 document.getElementById('progress-thumbnail').src = data.thumbnail_url;
                 document.getElementById('progress-title').textContent = data.title;
                 
-                // Show preview section
                 previewSection.classList.remove('hidden');
             }
             
-            // Format duration (seconds to HH:MM:SS)
             function formatDuration(seconds) {
                 const h = Math.floor(seconds / 3600);
                 const m = Math.floor((seconds % 3600) / 60);
@@ -1423,7 +1403,6 @@
                     .join(':');
             }
             
-            // Format views count
             function formatViews(views) {
                 if (views >= 1000000) {
                     return (views / 1000000).toFixed(1) + 'M views';
@@ -1433,17 +1412,13 @@
                 return views + ' views';
             }
             
-            // Start download process
             function startDownload(url, format, quality) {
-                // Show progress section
                 progressSection.classList.remove('hidden');
                 
-                // Reset progress bar
                 document.getElementById('progress-fill').style.width = '0%';
                 document.getElementById('progress-percent').textContent = '0%';
                 document.getElementById('progress-status').textContent = 'Preparing download...';
                 
-                // Generate a unique ID for this download
                 const downloadId = 'dl-' + Date.now();
                 state.activeDownloadId = downloadId;
                 state.downloadProgress[downloadId] = {
@@ -1452,7 +1427,6 @@
                     data: null
                 };
                 
-                // Prepare download data
                 const downloadData = {
                     url: url,
                     download_type: format,
@@ -1460,13 +1434,11 @@
                     metadata: document.getElementById('metadata').checked
                 };
                 
-                // Get custom filename if provided
                 const filename = document.getElementById('filename').value.trim();
                 if (filename) {
                     downloadData.filename = filename;
                 }
                 
-                // Get trim options if provided
                 const trimStart = document.getElementById('trim-start').value.trim();
                 const trimEnd = document.getElementById('trim-end').value.trim();
                 if (trimStart || trimEnd) {
@@ -1474,12 +1446,10 @@
                     downloadData.trim_end = trimEnd;
                 }
                 
-                // Get subtitles option
                 if (document.getElementById('subtitles').checked) {
                     downloadData.subtitles = true;
                 }
                 
-                // Add to download queue
                 state.downloadQueue.push({
                     id: downloadId,
                     url: url,
@@ -2113,7 +2083,7 @@
                 }, 3000);
             }
             
-            // Initialize the app
+            // Init app
             function init() {
                 // Load media library
                 loadMediaLibrary();
