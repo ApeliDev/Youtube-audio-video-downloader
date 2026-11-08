@@ -1,0 +1,17 @@
+name: Security scan
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  scan:
+    name: Block suspicious files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Block suspicious files
+        run: bash .github/scripts/block-suspicious-files.sh
